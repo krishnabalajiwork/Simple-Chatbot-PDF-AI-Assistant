@@ -1,8 +1,12 @@
 streamlit
 openai
 PyPDF2
-langchain
-langchain-community
+
+langchain>=0.2.0
+langchain-community>=0.2.0
+langchain-text-splitters>=0.2.0
+langchain-huggingface>=0.0.3
+
 faiss-cpu
 tiktoken
 sentence-transformers
