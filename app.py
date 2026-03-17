@@ -1,15 +1,13 @@
 """
-Streamlit Mini PDF-Q&A – ✨ POLISHED UI EDITION
-All internship requirements still satisfied (see inline comments).
+Streamlit Mini PDF-Q&A – Groq Edition
 """
 import streamlit as st
-from openai import OpenAI
+from groq import Groq
 from PyPDF2 import PdfReader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 import time
-
 
 # ---------- PAGE CONFIG ----------
 st.set_page_config(
@@ -19,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# ---------- CUSTOM CSS  (glass-morphism + neon) ----------
+# ---------- CUSTOM CSS ----------
 st.markdown(
     """
     <style>
@@ -30,13 +28,10 @@ st.markdown(
         background: #111317;
         color: #f1f1f1;
     }
-
     .block-container {
         padding-top: 3rem;
         padding-bottom: 3rem;
     }
-
-    /* ---- glass card ---- */
     .glass {
         background: rgba(255, 255, 255, 0.05);
         border-radius: 16px;
@@ -47,8 +42,6 @@ st.markdown(
         padding: 2rem;
         margin-bottom: 2rem;
     }
-
-    /* ---- gradient header ---- */
     .gradient-text {
         font-weight: 800;
         font-size: 3rem;
@@ -56,8 +49,6 @@ st.markdown(
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
-
-    /* ---- neon metric ---- */
     .neon-metric {
         display: inline-block;
         padding: 0.4rem 0.8rem;
@@ -68,8 +59,6 @@ st.markdown(
         font-weight: 600;
         margin-right: 0.5rem;
     }
-
-    /* ---- chat bubbles ---- */
     .user-bubble {
         background: rgba(66, 133, 244, 0.25);
         border-radius: 18px 18px 0 18px;
@@ -89,8 +78,6 @@ st.markdown(
         margin-bottom: 1rem;
         border: 1px solid rgba(255, 75, 75, 0.5);
     }
-
-    /* ---- uploader ---- */
     .stFileUploader > div {
         border-radius: 16px;
         background: rgba(255, 255, 255, 0.05);
@@ -115,9 +102,9 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------- AUTH ----------
 try:
-    openai_key = st.secrets["OPENAI_API_KEY"]
+    groq_key = st.secrets["GROQ_API_KEY"]
 except Exception:
-    st.error("🔑 Please set OPENAI_API_KEY in Streamlit secrets.")
+    st.error("🔑 Please set GROQ_API_KEY in Streamlit secrets.")
     st.stop()
 
 # ---------- UTILS ----------
@@ -181,11 +168,11 @@ if prompt := st.chat_input("Ask a question about the PDF"):
         st.warning("Please upload a PDF first.")
         st.stop()
 
-    # user bubble
+    # User bubble
     st.session_state.messages.append({"role": "user", "content": prompt})
     st.markdown(f'<div class="user-bubble">{prompt}</div>', unsafe_allow_html=True)
 
-    # retrieval
+    # Retrieval
     docs = st.session_state.vs.similarity_search(prompt, k=3)
     context = "\n\n".join(d.page_content for d in docs)
 
@@ -195,23 +182,23 @@ if prompt := st.chat_input("Ask a question about the PDF"):
     )
     qa_prompt = f"Context:\n{context}\n\nQuestion:\n{prompt}"
 
-    # assistant bubble (with typing indicator)
+    # Typing indicator
     with st.empty():
         st.markdown('<div class="bot-bubble">▌</div>', unsafe_allow_html=True)
-        time.sleep(0.2)
+        time.sleep(0.3)
 
-    client = OpenAI(api_key=openai_key, base_url="https://api.chatanywhere.tech/v1")
-    with st.empty():
-        stream = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "system", "content": system},
-                      {"role": "user", "content": qa_prompt}],
-            stream=True,
-        )
-        full = st.write_stream(
-            (chunk.choices[0].delta.content or "")
-            for chunk in stream
-            if chunk.choices and len(chunk.choices) > 0 and chunk.choices[0].delta
-        )
-        st.markdown(f'<div class="bot-bubble">{full}</div>', unsafe_allow_html=True)
-        st.session_state.messages.append({"role": "assistant", "content": full})
+    # Groq call
+    client = Groq(api_key=groq_key)
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": qa_prompt}
+        ],
+        max_tokens=1024,
+        temperature=0
+    )
+    full = response.choices[0].message.content
+
+    st.markdown(f'<div class="bot-bubble">{full}</div>', unsafe_allow_html=True)
+    st.session_state.messages.append({"role": "assistant", "content": full})
