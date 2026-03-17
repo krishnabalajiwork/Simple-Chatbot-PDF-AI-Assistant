@@ -1,5 +1,5 @@
 """
-Streamlit Mini PDF-Q&A – Groq Edition
+Streamlit Mini PDF-Q&A – Groq Edition with chat history context
 """
 import streamlit as st
 from groq import Groq
@@ -154,7 +154,7 @@ if st.session_state.vs:
         st.session_state.messages = []
         st.rerun()
 
-# ---------- CHAT ----------
+# ---------- CHAT HISTORY ----------
 st.markdown("---")
 for msg in st.session_state.messages:
     if msg["role"] == "user":
@@ -172,15 +172,27 @@ if prompt := st.chat_input("Ask a question about the PDF"):
     st.session_state.messages.append({"role": "user", "content": prompt})
     st.markdown(f'<div class="user-bubble">{prompt}</div>', unsafe_allow_html=True)
 
-    # Retrieval
-    docs = st.session_state.vs.similarity_search(prompt, k=3)
+    # --- Smart retrieval: enrich vague follow-ups with last bot answer ---
+    last_bot = next(
+        (m["content"] for m in reversed(st.session_state.messages[:-1]) if m["role"] == "assistant"),
+        ""
+    )
+    enriched_query = f"{last_bot} {prompt}" if last_bot else prompt
+    docs = st.session_state.vs.similarity_search(enriched_query, k=5)
     context = "\n\n".join(d.page_content for d in docs)
 
+    # System prompt
     system = (
         "You are a helpful assistant. Answer the question using ONLY the context below. "
-        "If the context does not contain the answer, say 'I don't know'."
+        "If the context does not contain the answer, say 'I don't know'.\n\n"
+        f"Context:\n{context}"
     )
-    qa_prompt = f"Context:\n{context}\n\nQuestion:\n{prompt}"
+
+    # Build full message history for Groq
+    groq_messages = [{"role": "system", "content": system}]
+    for m in st.session_state.messages[:-1]:
+        groq_messages.append({"role": m["role"], "content": m["content"]})
+    groq_messages.append({"role": "user", "content": prompt})
 
     # Typing indicator
     with st.empty():
@@ -191,10 +203,7 @@ if prompt := st.chat_input("Ask a question about the PDF"):
     client = Groq(api_key=groq_key)
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": qa_prompt}
-        ],
+        messages=groq_messages,
         max_tokens=1024,
         temperature=0
     )
