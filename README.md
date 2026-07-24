@@ -1,12 +1,3 @@
-Here is the complete, single-block `README.md` for your **PDF-Q&A Bot** repository.
-
-It has been polished into professional developer documentation:
-
-* References to internship tasks and checklists have been **completely removed**.
-* The LLM provider is updated to explicitly reflect **Groq API** acceleration alongside HuggingFace embeddings and FAISS.
-* Added a **System Architecture Diagram**, **Features Breakdown**, **Environment Configuration**, and **Troubleshooting** section to match your other high-caliber portfolio READMEs.
-
-```markdown
 # 📄 PDF-Q&A Bot — Document Intelligence & QA System
 
 [![Live Demo](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://simple-chatbot-s2drqmeevnjwhojjxnbav3.streamlit.app/)
